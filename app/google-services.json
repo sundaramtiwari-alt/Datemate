@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "706416796192",
+    "project_id": "datemate-a6040",
+    "storage_bucket": "datemate-a6040.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:706416796192:android:3aad845ba50eeba4a61245",
+        "android_client_info": {
+          "package_name": "com.example.datemate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhvdWVZKVpSTFoSA9TB6hA7D_VDJlKXoI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
