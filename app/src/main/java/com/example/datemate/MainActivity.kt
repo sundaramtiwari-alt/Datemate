@@ -66,15 +66,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun DateMateApp() {
 
-    // ==================================================
-    // CHECK IF USER IS ALREADY LOGGED IN
-    // ==================================================
-
     val firebaseUser =
         FirebaseAuth
             .getInstance()
             .currentUser
-
 
     var currentScreen by remember {
 
@@ -87,7 +82,6 @@ fun DateMateApp() {
         )
     }
 
-
     var userName by remember {
         mutableStateOf("")
     }
@@ -95,7 +89,6 @@ fun DateMateApp() {
     var userCity by remember {
         mutableStateOf("")
     }
-
 
     when (currentScreen) {
 
@@ -493,8 +486,6 @@ fun MainAppScreen(
         mutableStateOf(0)
     }
 
-
-    // User currently selected for chat
     var selectedChatUserId by remember {
         mutableStateOf<String?>(null)
     }
@@ -503,7 +494,6 @@ fun MainAppScreen(
         mutableStateOf("")
     }
 
-
     Scaffold(
 
         containerColor =
@@ -511,15 +501,12 @@ fun MainAppScreen(
 
         bottomBar = {
 
-            // Hide bottom navigation while chat is open
             if (selectedChatUserId == null) {
 
                 NavigationBar(
                     containerColor =
                         Color(0xFF18181F)
                 ) {
-
-                    // DISCOVER
 
                     NavigationBarItem(
 
@@ -555,8 +542,6 @@ fun MainAppScreen(
                     )
 
 
-                    // MATCHES
-
                     NavigationBarItem(
 
                         selected =
@@ -591,8 +576,6 @@ fun MainAppScreen(
                     )
 
 
-                    // CHAT
-
                     NavigationBarItem(
 
                         selected =
@@ -626,8 +609,6 @@ fun MainAppScreen(
                             navigationColors()
                     )
 
-
-                    // PROFILE
 
                     NavigationBarItem(
 
@@ -681,10 +662,6 @@ fun MainAppScreen(
                 )
         ) {
 
-            // ==================================================
-            // CHAT SCREEN
-            // ==================================================
-
             if (
                 selectedChatUserId != null
             ) {
@@ -712,20 +689,14 @@ fun MainAppScreen(
 
             } else {
 
-                // ==================================================
-                // NORMAL TABS
-                // ==================================================
-
                 when (selectedTab) {
 
-                    // DISCOVER
                     0 -> {
 
                         DiscoverScreen()
                     }
 
 
-                    // MATCHES
                     1 -> {
 
                         MatchesScreen(
@@ -744,7 +715,6 @@ fun MainAppScreen(
                     }
 
 
-                    // CHAT
                     2 -> {
 
                         ChatListScreen(
@@ -763,7 +733,6 @@ fun MainAppScreen(
                     }
 
 
-                    // PROFILE
                     3 -> {
 
                         ProfileScreen(
@@ -836,9 +805,24 @@ fun MatchesScreen(
             .getInstance()
             .currentUser
 
+    // Existing mutual matches
     var matches by remember {
         mutableStateOf<List<String>>(
             emptyList()
+        )
+    }
+
+    // Incoming likes
+    var incomingLikes by remember {
+        mutableStateOf<List<String>>(
+            emptyList()
+        )
+    }
+
+    // Users that current user has passed
+    var passedUsers by remember {
+        mutableStateOf<Set<String>>(
+            emptySet()
         )
     }
 
@@ -855,7 +839,7 @@ fun MatchesScreen(
 
 
     // ==============================================
-    // REAL-TIME MATCH LISTENER
+    // MUTUAL MATCH LISTENER
     // ==============================================
 
     DisposableEffect(currentUser?.uid) {
@@ -943,6 +927,130 @@ fun MatchesScreen(
 
 
     // ==============================================
+    // INCOMING LIKE LISTENER
+    // ==============================================
+
+    DisposableEffect(currentUser?.uid) {
+
+        if (currentUser == null) {
+
+            onDispose { }
+
+        } else {
+
+            val listener =
+                firestore
+                    .collection("likes")
+                    .whereEqualTo(
+                        "targetId",
+                        currentUser.uid
+                    )
+                    .addSnapshotListener {
+                            result,
+                            error ->
+
+                        if (error != null) {
+
+                            errorMessage =
+                                error.message
+                                    ?: "Could not load incoming likes."
+
+                            return@addSnapshotListener
+                        }
+
+                        if (result == null) {
+                            return@addSnapshotListener
+                        }
+
+                        val likerIds =
+                            result.documents.mapNotNull {
+                                    document ->
+
+                                document.getString(
+                                    "likerId"
+                                )
+                            }
+
+                        incomingLikes =
+                            likerIds.distinct()
+                    }
+
+            onDispose {
+                listener.remove()
+            }
+        }
+    }
+
+
+    // ==============================================
+    // PASSES LISTENER
+    // ==============================================
+
+    DisposableEffect(currentUser?.uid) {
+
+        if (currentUser == null) {
+
+            onDispose { }
+
+        } else {
+
+            val listener =
+                firestore
+                    .collection("passes")
+                    .whereEqualTo(
+                        "passerId",
+                        currentUser.uid
+                    )
+                    .addSnapshotListener {
+                            result,
+                            error ->
+
+                        if (error != null) {
+
+                            errorMessage =
+                                error.message
+                                    ?: "Could not load passed profiles."
+
+                            return@addSnapshotListener
+                        }
+
+                        if (result == null) {
+                            return@addSnapshotListener
+                        }
+
+                        val targetIds =
+                            result.documents.mapNotNull {
+                                    document ->
+
+                                document.getString(
+                                    "targetId"
+                                )
+                            }
+
+                        passedUsers =
+                            targetIds.toSet()
+                    }
+
+            onDispose {
+                listener.remove()
+            }
+        }
+    }
+
+
+    // ==============================================
+    // PENDING INCOMING LIKES
+    // ==============================================
+
+    val pendingLikes =
+        incomingLikes.filter { userId ->
+
+            userId !in matches &&
+                    userId !in passedUsers
+        }
+
+
+    // ==============================================
     // UI
     // ==============================================
 
@@ -974,15 +1082,15 @@ fun MatchesScreen(
 
         Spacer(
             modifier =
-                Modifier.height(10.dp)
+                Modifier.height(6.dp)
         )
 
         Text(
             text =
-                "People who liked you back.",
+                "People who liked you and your matches.",
 
             fontSize =
-                16.sp,
+                15.sp,
 
             color =
                 Color(0xFF9E9EA8)
@@ -990,7 +1098,179 @@ fun MatchesScreen(
 
         Spacer(
             modifier =
-                Modifier.height(20.dp)
+                Modifier.height(25.dp)
+        )
+
+
+        // ==========================================
+        // INCOMING LIKES
+        // ==========================================
+
+        if (pendingLikes.isNotEmpty()) {
+
+            Text(
+                text =
+                    "People who liked you ❤️",
+
+                fontSize =
+                    21.sp,
+
+                fontWeight =
+                    FontWeight.Bold,
+
+                color =
+                    Color.White
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(12.dp)
+            )
+
+            Column(
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                verticalArrangement =
+                    Arrangement.spacedBy(12.dp)
+            ) {
+
+                pendingLikes.forEach { likerId ->
+
+                    IncomingLikeCard(
+
+                        userId =
+                            likerId,
+
+                        onLike = {
+
+                            if (currentUser == null) {
+                                return@IncomingLikeCard
+                            }
+
+                            val currentUid =
+                                currentUser.uid
+
+                            val ownLikeId =
+                                "${currentUid}_${likerId}"
+
+                            val matchId =
+                                if (currentUid < likerId) {
+                                    "${currentUid}_${likerId}"
+                                } else {
+                                    "${likerId}_${currentUid}"
+                                }
+
+                            val likeData =
+                                hashMapOf(
+                                    "likerId" to currentUid,
+                                    "targetId" to likerId,
+                                    "createdAt" to
+                                            System.currentTimeMillis()
+                                )
+
+                            val matchData =
+                                hashMapOf(
+                                    "userIds" to listOf(
+                                        currentUid,
+                                        likerId
+                                    ),
+                                    "createdAt" to
+                                            System.currentTimeMillis()
+                                )
+
+                            firestore
+                                .collection("likes")
+                                .document(ownLikeId)
+                                .set(likeData)
+                                .addOnSuccessListener {
+
+                                    firestore
+                                        .collection("matches")
+                                        .document(matchId)
+                                        .set(matchData)
+                                        .addOnFailureListener {
+                                                exception ->
+
+                                            errorMessage =
+                                                exception.message
+                                                    ?: "Could not create match."
+                                        }
+                                }
+                                .addOnFailureListener {
+                                        exception ->
+
+                                    errorMessage =
+                                        exception.message
+                                            ?: "Could not send like."
+                                }
+                        },
+
+                        onPass = {
+
+                            if (currentUser == null) {
+                                return@IncomingLikeCard
+                            }
+
+                            val passId =
+                                "${currentUser.uid}_${likerId}"
+
+                            val passData =
+                                hashMapOf(
+                                    "passerId" to
+                                            currentUser.uid,
+
+                                    "targetId" to
+                                            likerId,
+
+                                    "createdAt" to
+                                            System.currentTimeMillis()
+                                )
+
+                            firestore
+                                .collection("passes")
+                                .document(passId)
+                                .set(passData)
+                                .addOnFailureListener {
+                                        exception ->
+
+                                    errorMessage =
+                                        exception.message
+                                            ?: "Could not pass this profile."
+                                }
+                        }
+                    )
+                }
+            }
+
+            Spacer(
+                modifier =
+                    Modifier.height(30.dp)
+            )
+        }
+
+
+        // ==========================================
+        // YOUR MATCHES
+        // ==========================================
+
+        Text(
+            text =
+                "Your Matches 💕",
+
+            fontSize =
+                21.sp,
+
+            fontWeight =
+                FontWeight.Bold,
+
+            color =
+                Color.White
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(12.dp)
         )
 
 
@@ -999,7 +1279,7 @@ fun MatchesScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp),
+                    .height(250.dp),
 
                 contentAlignment =
                     Alignment.Center
@@ -1010,16 +1290,15 @@ fun MatchesScreen(
                         Color(0xFFFF4F81)
                 )
             }
-        }
 
-        else if (
+        } else if (
             errorMessage.isNotEmpty()
         ) {
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp),
+                    .height(250.dp),
 
                 contentAlignment =
                     Alignment.Center
@@ -1061,16 +1340,15 @@ fun MatchesScreen(
                     )
                 }
             }
-        }
 
-        else if (
+        } else if (
             matches.isEmpty()
         ) {
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(400.dp),
+                    .height(250.dp),
 
                 contentAlignment =
                     Alignment.Center
@@ -1086,12 +1364,12 @@ fun MatchesScreen(
                             "❤️",
 
                         fontSize =
-                            60.sp
+                            55.sp
                     )
 
                     Spacer(
                         modifier =
-                            Modifier.height(15.dp)
+                            Modifier.height(12.dp)
                     )
 
                     Text(
@@ -1125,9 +1403,8 @@ fun MatchesScreen(
                     )
                 }
             }
-        }
 
-        else {
+        } else {
 
             Column(
                 modifier =
@@ -1160,6 +1437,313 @@ fun MatchesScreen(
             modifier =
                 Modifier.height(30.dp)
         )
+    }
+}
+
+
+// ======================================================
+// INCOMING LIKE CARD
+// ======================================================
+
+@Composable
+fun IncomingLikeCard(
+    userId: String,
+    onLike: () -> Unit,
+    onPass: () -> Unit
+) {
+
+    var name by remember(userId) {
+        mutableStateOf("Loading...")
+    }
+
+    var city by remember(userId) {
+        mutableStateOf("")
+    }
+
+    var photoUrl by remember(userId) {
+        mutableStateOf("")
+    }
+
+    var isProcessing by remember(userId) {
+        mutableStateOf(false)
+    }
+
+
+    LaunchedEffect(userId) {
+
+        FirebaseFirestore
+            .getInstance()
+            .collection("users")
+            .document(userId)
+            .get()
+            .addOnSuccessListener { document ->
+
+                if (document.exists()) {
+
+                    name =
+                        document.getString(
+                            "name"
+                        ) ?: "Unknown"
+
+                    city =
+                        document.getString(
+                            "city"
+                        ) ?: ""
+
+                    photoUrl =
+                        document.getString(
+                            "profilePhoto"
+                        ) ?: ""
+
+                } else {
+
+                    name =
+                        "Unknown User"
+                }
+            }
+            .addOnFailureListener {
+
+                name =
+                    "Unknown User"
+            }
+    }
+
+
+    Surface(
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        shape =
+            RoundedCornerShape(20.dp),
+
+        color =
+            Color(0xFF1B1B23)
+    ) {
+
+        Column(
+            modifier =
+                Modifier.padding(14.dp)
+        ) {
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                if (photoUrl.isNotEmpty()) {
+
+                    Image(
+                        painter =
+                            rememberAsyncImagePainter(
+                                model =
+                                    photoUrl
+                            ),
+
+                        contentDescription =
+                            "Incoming Like Photo",
+
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape),
+
+                        contentScale =
+                            ContentScale.Crop
+                    )
+
+                } else {
+
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Color(0xFF292933)
+                            ),
+
+                        contentAlignment =
+                            Alignment.Center
+                    ) {
+
+                        Text(
+                            text =
+                                "👤",
+
+                            fontSize =
+                                36.sp
+                        )
+                    }
+                }
+
+
+                Spacer(
+                    modifier =
+                        Modifier.width(15.dp)
+                )
+
+
+                Column(
+                    modifier =
+                        Modifier.weight(1f)
+                ) {
+
+                    Text(
+                        text =
+                            name,
+
+                        fontSize =
+                            19.sp,
+
+                        fontWeight =
+                            FontWeight.Bold,
+
+                        color =
+                            Color.White
+                    )
+
+                    if (city.isNotEmpty()) {
+
+                        Spacer(
+                            modifier =
+                                Modifier.height(4.dp)
+                        )
+
+                        Text(
+                            text =
+                                city,
+
+                            fontSize =
+                                14.sp,
+
+                            color =
+                                Color(0xFF9E9EA8)
+                        )
+                    }
+                }
+            }
+
+
+            Spacer(
+                modifier =
+                    Modifier.height(14.dp)
+            )
+
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                horizontalArrangement =
+                    Arrangement.spacedBy(10.dp)
+            ) {
+
+                OutlinedButton(
+                    onClick = {
+
+                        if (!isProcessing) {
+
+                            isProcessing = true
+
+                            onPass()
+                        }
+                    },
+
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+
+                    enabled =
+                        !isProcessing,
+
+                    shape =
+                        RoundedCornerShape(14.dp)
+                ) {
+
+                    if (isProcessing) {
+
+                        CircularProgressIndicator(
+                            modifier =
+                                Modifier.size(20.dp),
+
+                            color =
+                                Color.Gray,
+
+                            strokeWidth =
+                                2.dp
+                        )
+
+                    } else {
+
+                        Text(
+                            text =
+                                "❌ Pass",
+
+                            fontSize =
+                                15.sp,
+
+                            color =
+                                Color.White
+                        )
+                    }
+                }
+
+
+                Button(
+                    onClick = {
+
+                        if (!isProcessing) {
+
+                            isProcessing = true
+
+                            onLike()
+                        }
+                    },
+
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+
+                    enabled =
+                        !isProcessing,
+
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor =
+                                Color(0xFFFF4F81)
+                        ),
+
+                    shape =
+                        RoundedCornerShape(14.dp)
+                ) {
+
+                    if (isProcessing) {
+
+                        CircularProgressIndicator(
+                            modifier =
+                                Modifier.size(20.dp),
+
+                            color =
+                                Color.White,
+
+                            strokeWidth =
+                                2.dp
+                        )
+
+                    } else {
+
+                        Text(
+                            text =
+                                "❤️ Like",
+
+                            fontSize =
+                                15.sp
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -2021,8 +2605,6 @@ fun ProfileScreen(
         rememberScrollState()
 
 
-    // LOAD PROFILE
-
     LaunchedEffect(
         currentUser?.uid
     ) {
@@ -2058,8 +2640,6 @@ fun ProfileScreen(
     }
 
 
-    // PROFILE UI
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -2091,8 +2671,6 @@ fun ProfileScreen(
                 Modifier.height(25.dp)
         )
 
-
-        // PROFILE PHOTO
 
         Box(
             modifier = Modifier
@@ -2153,8 +2731,6 @@ fun ProfileScreen(
         )
 
 
-        // NAME
-
         Text(
             text =
                 if (
@@ -2181,8 +2757,6 @@ fun ProfileScreen(
         )
 
 
-        // CITY
-
         Text(
             text =
                 if (
@@ -2206,8 +2780,6 @@ fun ProfileScreen(
         )
 
 
-        // EMAIL
-
         Text(
             text =
                 currentUser?.email
@@ -2226,8 +2798,6 @@ fun ProfileScreen(
                 Modifier.height(25.dp)
         )
 
-
-        // EDIT PROFILE
 
         Button(
             onClick =
@@ -2263,8 +2833,6 @@ fun ProfileScreen(
         )
 
 
-        // SETTINGS
-
         ProfileOption(
             title =
                 "Settings",
@@ -2282,8 +2850,6 @@ fun ProfileScreen(
                 Modifier.height(12.dp)
         )
 
-
-        // PRIVACY
 
         ProfileOption(
             title =
@@ -2303,8 +2869,6 @@ fun ProfileScreen(
         )
 
 
-        // HELP
-
         ProfileOption(
             title =
                 "Help & Contact",
@@ -2322,8 +2886,6 @@ fun ProfileScreen(
                 Modifier.height(20.dp)
         )
 
-
-        // LOGOUT
 
         OutlinedButton(
             onClick =
@@ -2536,8 +3098,6 @@ fun SettingsScreen(
         )
 
 
-        // ACCOUNT
-
         SettingsSectionTitle(
             text =
                 "Account"
@@ -2577,8 +3137,6 @@ fun SettingsScreen(
         )
 
 
-        // APP PREFERENCES
-
         SettingsSectionTitle(
             text =
                 "App Preferences"
@@ -2616,8 +3174,6 @@ fun SettingsScreen(
                 Modifier.height(25.dp)
         )
 
-
-        // ABOUT
 
         SettingsSectionTitle(
             text =

@@ -181,7 +181,10 @@ fun DiscoverScreen() {
         val currentUid = currentUser.uid
         val targetUid = profile.uid
 
-        // Our Like document
+        // ======================================
+        // OUR LIKE DOCUMENT
+        // ======================================
+
         val likeId = "${currentUid}_${targetUid}"
 
         val likeData = hashMapOf(
@@ -202,22 +205,25 @@ fun DiscoverScreen() {
 
                 // ======================================
                 // CHECK REVERSE LIKE
+                //
+                // IMPORTANT:
+                // We use a QUERY instead of directly
+                // reading a possibly non-existent document.
                 // ======================================
-
-                val reverseLikeId =
-                    "${targetUid}_${currentUid}"
 
                 firestore
                     .collection("likes")
-                    .document(reverseLikeId)
+                    .whereEqualTo("likerId", targetUid)
+                    .whereEqualTo("targetId", currentUid)
+                    .limit(1)
                     .get()
-                    .addOnSuccessListener { reverseLike ->
+                    .addOnSuccessListener { result ->
 
                         // ======================================
                         // MUTUAL LIKE
                         // ======================================
 
-                        if (reverseLike.exists()) {
+                        if (!result.isEmpty) {
 
                             val matchId =
                                 if (currentUid < targetUid) {
@@ -250,8 +256,10 @@ fun DiscoverScreen() {
                                 .addOnFailureListener { exception ->
 
                                     errorMessage =
-                                        exception.message
-                                            ?: "Could not create match."
+                                        "Match error: ${
+                                            exception.message
+                                                ?: "Could not create match."
+                                        }"
 
                                     isProcessing = false
                                 }
@@ -268,8 +276,10 @@ fun DiscoverScreen() {
                     .addOnFailureListener { exception ->
 
                         errorMessage =
-                            exception.message
-                                ?: "Could not check match."
+                            "Reverse like check failed: ${
+                                exception.message
+                                    ?: "Could not check match."
+                            }"
 
                         isProcessing = false
                     }
@@ -277,8 +287,10 @@ fun DiscoverScreen() {
             .addOnFailureListener { exception ->
 
                 errorMessage =
-                    exception.message
-                        ?: "Could not send like."
+                    "Like failed: ${
+                        exception.message
+                            ?: "Could not send like."
+                    }"
 
                 isProcessing = false
             }

@@ -1,5 +1,6 @@
 package com.example.datemate
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
@@ -51,10 +53,15 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFF0F0F14))
             .padding(24.dp),
 
         verticalArrangement = Arrangement.Center
     ) {
+
+        // ==============================
+        // TITLE
+        // ==============================
 
         Text(
             text = "Welcome back",
@@ -70,7 +77,7 @@ fun LoginScreen(
         Text(
             text = "Login to your DateMate account",
             fontSize = 16.sp,
-            color = Color.Gray
+            color = Color.White
         )
 
         Spacer(
@@ -102,7 +109,13 @@ fun LoginScreen(
 
             enabled = !isLoading,
 
+            shape = RoundedCornerShape(14.dp),
+
             colors = OutlinedTextFieldDefaults.colors(
+
+                // Background
+                focusedContainerColor = Color(0xFF1B1B23),
+                unfocusedContainerColor = Color(0xFF1B1B23),
 
                 // Typed text
                 focusedTextColor = Color.White,
@@ -110,11 +123,11 @@ fun LoginScreen(
 
                 // Label
                 focusedLabelColor = Color.White,
-                unfocusedLabelColor = Color(0xFFAAAAAA),
+                unfocusedLabelColor = Color.White,
 
                 // Border
                 focusedBorderColor = Color(0xFFFF4F81),
-                unfocusedBorderColor = Color(0xFF777780),
+                unfocusedBorderColor = Color(0xFFAAAAAA),
 
                 // Cursor
                 cursorColor = Color(0xFFFF4F81)
@@ -150,7 +163,13 @@ fun LoginScreen(
 
             enabled = !isLoading,
 
+            shape = RoundedCornerShape(14.dp),
+
             colors = OutlinedTextFieldDefaults.colors(
+
+                // Background
+                focusedContainerColor = Color(0xFF1B1B23),
+                unfocusedContainerColor = Color(0xFF1B1B23),
 
                 // Typed text
                 focusedTextColor = Color.White,
@@ -158,11 +177,11 @@ fun LoginScreen(
 
                 // Label
                 focusedLabelColor = Color.White,
-                unfocusedLabelColor = Color(0xFFAAAAAA),
+                unfocusedLabelColor = Color.White,
 
                 // Border
                 focusedBorderColor = Color(0xFFFF4F81),
-                unfocusedBorderColor = Color(0xFF777780),
+                unfocusedBorderColor = Color(0xFFAAAAAA),
 
                 // Cursor
                 cursorColor = Color(0xFFFF4F81)
@@ -172,6 +191,10 @@ fun LoginScreen(
         Spacer(
             modifier = Modifier.height(12.dp)
         )
+
+        // ==============================
+        // ERROR
+        // ==============================
 
         if (errorMessage.isNotEmpty()) {
 
@@ -226,7 +249,6 @@ fun LoginScreen(
                             }
                         }
                 }
-
             },
 
             modifier = Modifier
@@ -237,7 +259,9 @@ fun LoginScreen(
                 containerColor = Color(0xFFFF4F81)
             ),
 
-            enabled = !isLoading
+            enabled = !isLoading,
+
+            shape = RoundedCornerShape(14.dp)
         ) {
 
             Text(
@@ -248,7 +272,8 @@ fun LoginScreen(
                 },
 
                 fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
         }
 
@@ -265,10 +290,15 @@ fun LoginScreen(
 
             modifier = Modifier.fillMaxWidth(),
 
-            enabled = !isLoading
+            enabled = !isLoading,
+
+            shape = RoundedCornerShape(14.dp)
         ) {
 
-            Text("Back")
+            Text(
+                text = "Back",
+                color = Color.White
+            )
         }
     }
 }
